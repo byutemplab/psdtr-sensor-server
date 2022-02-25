@@ -213,7 +213,6 @@ class ClearPopupThread(threading.Thread):
         while True:
             try:
                 handles = findwindows.find_windows(title=self.window_name)
-                print("close popup")
             except findwindows.WindowNotFoundError:
                 pass  # Just do nothing if the pop-up dialog was not found
             else:  # The window was found, so click the button
