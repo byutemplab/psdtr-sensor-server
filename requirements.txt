@@ -10,3 +10,4 @@ pandas==1.3.4
 pyusb==1.2.1
 zwoasi==0.1.0.1
 Pillow==8.4.0
+tinydb==4.7.0

@@ -20,20 +20,32 @@
 
 import cv2
 import numpy as np
-
-alignment_settings = {
-    "cmos-camera-marks": [[0.05, 0.4], [0.35, 0], [0.95, 0.5], [0.7, 0.9]],
-    "sem-image-marks": [[0, 0], [1, 0], [1, 1], [0, 1]],
-    "cmos-camera-green-dots": [[0, 0], [0, 0], [0, 0], [0, 0]],
-    "lock-in-camera-green-dots": [[0, 0], [0, 0], [0, 0], [0, 0]],
-}
+from models import alignment_items, alignment_settings_db
 
 
 class ImageTransformer():
-    def __init__(self, src_points, dst_points, cols, rows):
+    def __init__(self, src_cols, src_rows, src_marks_db_name, dest_cols, dest_rows, dest_marks_db_name):
+        self.src_cols = src_cols
+        self.src_rows = src_rows
+        self.dest_cols = dest_cols
+        self.dest_rows = dest_rows
+        self.src_marks_db_name = src_marks_db_name
+        self.dest_marks_db_name = dest_marks_db_name
+        self.update()
+
+    def update(self):
+        src_marks = alignment_settings_db.search(
+            alignment_items.name == self.src_marks_db_name)[0]["coordinates"]
+        dest_marks = alignment_settings_db.search(
+            alignment_items.name == self.dest_marks_db_name)[0]["coordinates"]
+        self.update_marks(src_marks, dest_marks)
+
+    def update_marks(self, src_marks, dst_marks):
+        src_points = np.float32(
+            np.int32(np.array(src_marks) * [self.src_cols, self.src_rows]))
+        dst_points = np.float32(
+            np.int32(np.array(dst_marks) * [self.dest_cols, self.dest_cols]))
         self.update_projective_matrix(src_points, dst_points)
-        self.cols = cols
-        self.rows = rows
 
     def update_projective_matrix(self, src_points, dst_points):
         self.projective_matrix = cv2.getPerspectiveTransform(
@@ -41,4 +53,4 @@ class ImageTransformer():
 
     def project(self, image):
         # transform image to np array
-        return cv2.warpPerspective(image, self.projective_matrix, (self.cols, self.rows))
+        return cv2.warpPerspective(image, self.projective_matrix, (self.dest_cols, self.dest_rows))
