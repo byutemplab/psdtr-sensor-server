@@ -5,7 +5,7 @@ import time
 import threading
 from cmoscamera.camerastream import CMOSCamera
 from lockincamera.camerastream import LockInCamera
-from models import alignment_settings_db, alignment_items, devices, projected_frames
+from models import alignment_settings_db, alignment_items, devices_db, devices_list, projected_frames
 from clear_popup_thread import ClearPopupThread
 from cmos_camera_thread import CMOSCameraThread
 from lock_in_camera_thread import LockInCameraThread
@@ -31,52 +31,17 @@ def index():
 
 class DeviceList(Resource):
     def get(self):
-        return {'message': 'Success', 'data': devices}, 200
-
-    def post(self):
-        parser = reqparse.RequestParser()
-
-        parser.add_argument('name', required=True, type=str,
-                            help='name cannot be left blank')
-        parser.add_argument('id', required=True, type=int,
-                            help='id cannot be left blank')
-        parser.add_argument('device_type', required=True,
-                            type=str, help='device_type cannot be left blank')
-        parser.add_argument('port', required=True,
-                            type=str, help='port cannot be left blank')
-        parser.add_argument('connected', required=False,
-                            default=False, type=bool)
-        parser.add_argument('settings', required=False, default={}, type=dict)
-
-        # Parse the arguments into an object
-        args = parser.parse_args()
-        device = {
-            "id": args["id"],
-            "device_type": args["device_type"],
-            "port": args["port"],
-            "connected": args["connected"],
-            "settings": args["settings"],
-        }
-        devices[args["name"]] = device
-
-        return {'message': 'Device registered', 'data': device}, 201
+        return {'message': 'Success', 'data': devices_db.all()}, 200
 
 
 class Device(Resource):
     def get(self, name):
-        # If the key does not exist in the data store, return a 404 error.
-        if not (name in devices):
+        device = devices_db.search(devices_list.name == name)[0]
+
+        if (device is None):
             return {'message': 'Device not found', 'data': {}}, 404
 
-        return {'message': 'Device found', 'data': devices[name]}, 200
-
-    def delete(self, name):
-        # If the key does not exist in the data store, return a 404 error.
-        if not (name in devices):
-            return {'message': 'Device not found', 'data': {}}, 404
-
-        del devices[name]
-        return '', 204
+        return {'message': 'Device found', 'data': device}, 200
 
 
 def cmoscamera_frames():

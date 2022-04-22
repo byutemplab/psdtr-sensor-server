@@ -2,6 +2,7 @@ import cv2
 import time
 import threading
 from lockincamera.camerastream import LockInCamera
+from models import devices_db, devices_list, projected_frames
 
 
 class LockInCameraThread(threading.Thread):
@@ -11,12 +12,16 @@ class LockInCameraThread(threading.Thread):
         self.read = None
         self.frame = None
         # self.projected_frame = None
+
         # Init thread
         threading.Thread.__init__(self)
 
     def run(self):
         while(True):
-            devices["helicam"]["connected"] = self.camera.connected
+            # update connected status in db
+            if self.camera.connected is not None:
+                devices_db.update({'connected': self.camera.connected},
+                                  devices_list.name == "lock-in-camera")
             if(self.camera.connected):
                 self.read = self.camera.Read()
                 if(self.read is not None):

@@ -5,7 +5,7 @@ import time
 import threading
 from cmoscamera.camerastream import CMOSCamera
 from alignment import ImageTransformer
-from models import devices, projected_frames
+from models import devices_db, devices_list, projected_frames
 
 
 class CMOSCameraThread(threading.Thread):
@@ -24,11 +24,15 @@ class CMOSCameraThread(threading.Thread):
         self.image_transformer = ImageTransformer(
             cmos_camera_width, cmos_camera_height, "cmos-camera-marks", sem_image_width, sem_image_height, "sem-image-marks")
 
+        # Init thread
         threading.Thread.__init__(self)
 
     def run(self):
         while(True):
-            devices["cmos-camera"]["connected"] = self.camera.connected
+            # update connected status in db
+            if self.camera.connected is not None:
+                devices_db.update(
+                    {'connected': self.camera.connected}, devices_list.name == "cmos-camera")
             if(self.camera.connected):
                 self.read = self.camera.Read()
                 if(self.read is not None):
