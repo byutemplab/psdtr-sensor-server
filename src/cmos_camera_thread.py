@@ -30,7 +30,9 @@ class CMOSCameraThread(threading.Thread):
     def run(self):
         while(True):
             # update connected status in db
-            if self.camera.connected is not None:
+            db_connected_status = devices_db.search(
+                devices_list.name == "cmos-camera")[0]["connected"]
+            if self.camera.connected is not db_connected_status and db_connected_status is not None:
                 devices_db.update(
                     {'connected': self.camera.connected}, devices_list.name == "cmos-camera")
             if(self.camera.connected):
