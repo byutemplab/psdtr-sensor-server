@@ -5,7 +5,10 @@ import time
 import threading
 from cmoscamera.camerastream import CMOSCamera
 from lockincamera.camerastream import LockInCamera
-from models import alignment_settings_db, alignment_items, devices_db, devices_list, projected_frames
+from models import alignment_settings_db, alignment_items
+from models import devices_db, devices_list
+from models import trajectories_db, trajectories_list
+from models import projected_frames
 from clear_popup_thread import ClearPopupThread
 from cmos_camera_thread import CMOSCameraThread
 from lock_in_camera_thread import LockInCameraThread
@@ -98,6 +101,67 @@ class AlignmentSettings(Resource):
         return {'message': 'Success', 'data': alignment_settings_db.all()}, 200
 
 
+class Trajectories(Resource):
+    def get(self):
+        return {'message': 'Success', 'data': trajectories_db.all()}, 200
+
+
+class TrajectoriesSetting(Resource):
+    def get(self, name, trajectory_idx):
+        trajectories_setting = trajectories_db.search(
+            trajectories_list.name == name)[0]
+        if (trajectories_setting is None):
+            return {'message': 'Trajectory not found', 'data': {}}, 404
+        if trajectory_idx < 0 or trajectory_idx > len(trajectories_setting['trajectories']):
+            return {'message': 'Trajectory index out of range', 'data': {}}, 404
+        return {'message': 'Success', 'data': trajectories_setting['trajectories'][trajectory_idx]}, 200
+
+    def post(self, name, trajectory_idx):
+        parser = reqparse.RequestParser()
+
+        parser.add_argument('start_x', required=True, type=float,
+                            help='Trajectory start x coordinate cannot be blank')
+        parser.add_argument('start_y', required=True, type=float,
+                            help='Trajectory start y coordinate cannot be blank')
+        parser.add_argument('end_x', required=True, type=float,
+                            help='Trajectory end x coordinate cannot be blank')
+        parser.add_argument('end_y', required=True, type=float,
+                            help='Trajectory end y coordinate cannot be blank')
+
+        # Parse the arguments into an object
+        args = parser.parse_args()
+
+        # Validate the arguments
+        trajectories_setting = trajectories_db.search(
+            trajectories_list.name == name)[0]
+        if (trajectories_setting is None):
+            return {'message': 'Trajectory not found', 'data': {}}, 404
+        if trajectory_idx < 0 or trajectory_idx > len(trajectories_setting['trajectories']):
+            return {'message': 'Trajectory index out of range', 'data': {}}, 404
+        if args["start_x"] < 0 or args["start_x"] > 1:
+            return {'message': 'Start x coord must be between 0 and 1', 'data': {}}, 400
+        if args["start_y"] < 0 or args["start_y"] > 1:
+            return {'message': 'Start y coord must be between 0 and 1', 'data': {}}, 400
+        if args["end_x"] < 0 or args["end_x"] > 1:
+            return {'message': 'End x coord must be between 0 and 1', 'data': {}}, 400
+        if args["end_y"] < 0 or args["end_y"] > 1:
+            return {'message': 'End y coord must be between 0 and 1', 'data': {}}, 400
+
+        # Update alignment settings
+        new_start_coord = (args['start_x'], args['start_y'])
+        new_end_coord = (args['end_x'], args['end_y'])
+        updated_trajectory = {
+            'start': new_start_coord,
+            'end': new_end_coord
+        }
+        updated_trajectories = trajectories_setting['trajectories']
+        updated_trajectories[trajectory_idx] = updated_trajectory
+        trajectories_db.update(
+            {'trajectories': updated_trajectories}, trajectories_list.name == name)
+
+        return {'message': 'Trajectories Setting changed', 'data': updated_trajectory}, 201
+
+
 class AlignmentSetting(Resource):
     def get(self, name):
         alignment_setting = alignment_settings_db.search(alignment_items.name == name)[
@@ -145,6 +209,9 @@ class AlignmentSetting(Resource):
 api.add_resource(DeviceList, '/devices')
 api.add_resource(Device, '/device/<string:name>')
 api.add_resource(AlignmentSettings, '/alignment-settings')
+api.add_resource(Trajectories, '/trajectories')
+api.add_resource(TrajectoriesSetting,
+                 '/trajectories-setting/<string:name>/<int:trajectory_idx>')
 api.add_resource(AlignmentSetting, '/alignment-setting/<string:name>')
 api.add_resource(CMOSCamera, '/cmos-camera/feed')
 api.add_resource(LockInCamera, '/lock-in-camera/feed')
