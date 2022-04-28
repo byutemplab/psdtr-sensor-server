@@ -33,26 +33,26 @@ def bitstobytes(a):
 
 
 class dmd():
-    def __init__(self, device=None, address=None):
+    def __init__(self, address=None, device=None):
+        self.connected = False
         self.dev = device
         self.address = address
-        self.connected = True
 
-    def TryConnection(self):
-        try:
-            devices = list(usb.core.find(
-                idVendor=0x0451, idProduct=0xc900, find_all=True))
-            for dev in devices:
-                if (dev.address == self.address):
-                    self.dev = dev
-            self.dev.set_configuration()
-            self.ans = []
-            self.connected = True
-        except:
-            self.connected = False
+    def CheckConnection(self):
+        devices = list(usb.core.find(idVendor=0x0451,
+                       idProduct=0xc900, find_all=True))
+        for dev in devices:
+            # if (dev.address == self.address):  TODO: how to solve 2 projectors
+            # if the device is connected again, reset it
+            if (self.connected == False):
+                self.connected = True
+                self.dev = dev
+                self.dev.set_configuration()
+                self.ans = []
+            return True
+        self.connected = False
 
-# standard usb command function
-
+    # standard usb command function
     def command(self, mode, sequencebyte, com1, com2, data=None):
         buffer = []
 

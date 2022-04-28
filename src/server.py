@@ -13,6 +13,7 @@ from clear_popup_thread import ClearPopupThread
 from cmos_camera_thread import CMOSCameraThread
 from lock_in_camera_thread import LockInCameraThread
 from alignment_check_thread import AlignmentCheckThread
+from projectors_thread import ProjectorThread
 from flask import Flask, Response
 from flask_restful import Resource, Api, reqparse
 
@@ -139,13 +140,13 @@ class TrajectoriesSetting(Resource):
         if trajectory_idx < 0 or trajectory_idx > len(trajectories_setting['trajectories']):
             return {'message': 'Trajectory index out of range', 'data': {}}, 404
         if args["start_x"] < 0 or args["start_x"] > 1:
-            return {'message': 'Start x coord must be between 0 and 1', 'data': {}}, 400
+            return {'message': 'Start x coord must be between 0 and 1', 'data': {}}, 404
         if args["start_y"] < 0 or args["start_y"] > 1:
-            return {'message': 'Start y coord must be between 0 and 1', 'data': {}}, 400
+            return {'message': 'Start y coord must be between 0 and 1', 'data': {}}, 404
         if args["end_x"] < 0 or args["end_x"] > 1:
-            return {'message': 'End x coord must be between 0 and 1', 'data': {}}, 400
+            return {'message': 'End x coord must be between 0 and 1', 'data': {}}, 404
         if args["end_y"] < 0 or args["end_y"] > 1:
-            return {'message': 'End y coord must be between 0 and 1', 'data': {}}, 400
+            return {'message': 'End y coord must be between 0 and 1', 'data': {}}, 404
 
         # Update alignment settings
         new_start_coord = (args['start_x'], args['start_y'])
@@ -160,6 +161,64 @@ class TrajectoriesSetting(Resource):
             {'trajectories': updated_trajectories}, trajectories_list.name == name)
 
         return {'message': 'Trajectories Setting changed', 'data': updated_trajectory}, 201
+
+    def delete(self, name, trajectory_idx):
+        trajectories_setting = trajectories_db.search(
+            trajectories_list.name == name)[0]
+        if (trajectories_setting is None):
+            return {'message': 'Trajectories setting not found', 'data': {}}, 404
+        if trajectory_idx < 0 or trajectory_idx > len(trajectories_setting['trajectories']):
+            return {'message': 'Trajectory index out of range', 'data': {}}, 404
+
+        updated_trajectories = trajectories_setting['trajectories']
+        del updated_trajectories[trajectory_idx]
+        trajectories_db.update(
+            {'trajectories': updated_trajectories}, trajectories_list.name == name)
+
+        return {'message': 'Trajectory deleted', 'data': {}}, 200
+
+    def put(self, name, trajectory_idx):
+        parser = reqparse.RequestParser()
+
+        parser.add_argument('start_x', required=True, type=float,
+                            help='Trajectory start x coordinate cannot be blank')
+        parser.add_argument('start_y', required=True, type=float,
+                            help='Trajectory start y coordinate cannot be blank')
+        parser.add_argument('end_x', required=True, type=float,
+                            help='Trajectory end x coordinate cannot be blank')
+        parser.add_argument('end_y', required=True, type=float,
+                            help='Trajectory end y coordinate cannot be blank')
+
+        # Parse the arguments into an object
+        args = parser.parse_args()
+
+        # Validate the arguments
+        trajectories_setting = trajectories_db.search(
+            trajectories_list.name == name)[0]
+        if (trajectories_setting is None):
+            return {'message': 'Trajectories setting not found', 'data': {}}, 404
+        if args["start_x"] < 0 or args["start_x"] > 1:
+            return {'message': 'Start x coord must be between 0 and 1', 'data': {}}, 404
+        if args["start_y"] < 0 or args["start_y"] > 1:
+            return {'message': 'Start y coord must be between 0 and 1', 'data': {}}, 404
+        if args["end_x"] < 0 or args["end_x"] > 1:
+            return {'message': 'End x coord must be between 0 and 1', 'data': {}}, 404
+        if args["end_y"] < 0 or args["end_y"] > 1:
+            return {'message': 'End y coord must be between 0 and 1', 'data': {}}, 404
+
+        # Update alignment settings
+        start_coord = (args['start_x'], args['start_y'])
+        end_coord = (args['end_x'], args['end_y'])
+        new_trajectory = {
+            'start': start_coord,
+            'end': end_coord
+        }
+        updated_trajectories = trajectories_setting['trajectories']
+        updated_trajectories.append(new_trajectory)
+        trajectories_db.update(
+            {'trajectories': updated_trajectories}, trajectories_list.name == name)
+
+        return {'message': 'Added new trajectory', 'data': new_trajectory}, 201
 
 
 class AlignmentSetting(Resource):
@@ -206,6 +265,18 @@ class AlignmentSetting(Resource):
         return {'message': 'Alignment settings changed', 'data': alignment_setting}, 201
 
 
+class LaserProjectorSetPattern(Resource):
+    def post(self, trajectories_setting_name):
+        trajectories_setting = trajectories_db.search(
+            trajectories_list.name == trajectories_setting_name)[0]
+        pattern_set = laser_projector_thread.SendPattern(trajectories_setting)
+
+        if(pattern_set):
+            return {'message': 'Pattern set in laser projector', 'data': {}}, 200
+        else:
+            return {'message': 'Failed to set pattern in laser projector', 'data': {}}, 400
+
+
 api.add_resource(DeviceList, '/devices')
 api.add_resource(Device, '/device/<string:name>')
 api.add_resource(AlignmentSettings, '/alignment-settings')
@@ -217,6 +288,9 @@ api.add_resource(CMOSCamera, '/cmos-camera/feed')
 api.add_resource(LockInCamera, '/lock-in-camera/feed')
 api.add_resource(SEMImages, '/sem-images/feed')
 api.add_resource(AlignmentCheck, '/alignment-check/feed')
+api.add_resource(LaserProjectorSetPattern,
+                 '/laser-projector/set-pattern/<string:trajectories_setting_name>')
+# api.add_resource(GreenProjectorSetPattern, '/rgb-projector/set-pattern')
 
 
 if __name__ == "__main__":
@@ -243,5 +317,11 @@ if __name__ == "__main__":
     # Init Alignment check thread
     alignment_check_thread = AlignmentCheckThread()
     alignment_check_thread.start()
+
+    # Init Projectors thread
+    laser_projector_thread = ProjectorThread('rgb-projector', 1)
+    laser_projector_thread.start()
+    # rgb_projector_thread = ProjectorThread('rgb-projector', 1)  # TODO
+    # rgb_projector_thread.start()
 
     app.run(host='0.0.0.0', port=80, debug=False, use_reloader=False)
