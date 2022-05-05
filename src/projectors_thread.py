@@ -2,6 +2,7 @@ import os
 import usb.core
 import usb.util
 import skimage.draw
+import skimage.morphology
 import numpy as np
 import time
 import threading
@@ -57,7 +58,7 @@ class ProjectorThread(threading.Thread):
         for frame in range(pattern['number-of-measurements']):
             frames_array.append(np.zeros((RES_Y, RES_X)).astype(np.uint8))
 
-        if self.name == 'rgb-projector':
+        if self.name == 'green-projector':
             # Draw each green dot trajectory in the frames array
             for trajectory in pattern['trajectories']:
                 # Get every point in the line
@@ -105,6 +106,44 @@ class ProjectorThread(threading.Thread):
 
         # Start sequence
         self.dmd.defsequence(frames_array, 'green', exposure, trigger_in,
+                             dark_time, trigger_out, repetitions)
+        self.dmd.startsequence()
+
+        return True
+
+    def SendBox(self, box):
+        # Check if projector is connected
+        connected = self.dmd.CheckConnection()
+        print(connected)
+        if (not connected):
+            return False
+
+        # Init empty array
+        frame = np.zeros((RES_Y, RES_X)).astype(np.uint8)
+
+        # Draw 1-pixel-thick box
+        start = ((0.5 + box['x-offset']) * RES_X - box['side-length'] * RES_Y / 2,
+                 (0.5 + box['y-offset']) * RES_Y - box['side-length'] * RES_Y / 2)
+        rr_disk, cc_disk = skimage.draw.rectangle_perimeter(start=(start[1], start[0]),
+                                                            extent=(box['side-length'] * RES_Y, box['side-length'] * RES_Y))
+        frame[rr_disk, cc_disk] = 1
+
+        # Dilate to box thickness using morphology
+        frame = skimage.morphology.dilation(
+            frame, skimage.morphology.disk(box['thickness']))
+
+        self.dmd.stopsequence()
+        self.dmd.changemode(3)
+
+        # Set secondary parameters
+        exposure = [1]
+        dark_time = [0]
+        trigger_in = [0]
+        trigger_out = [0]
+        repetitions = 0  # infinite loop
+
+        # Start sequence
+        self.dmd.defsequence([frame], 'green', exposure, trigger_in,
                              dark_time, trigger_out, repetitions)
         self.dmd.startsequence()
 

@@ -19,6 +19,10 @@ from flask_restful import Resource, Api, reqparse
 
 LOCK_IN_CAMERA_CONNECTED = False
 
+# Import image placeholder
+no_image_placeholder = cv2.imencode('.jpg', cv2.imread(
+    './assets/no_image_placeholder.png'))[1].tobytes()
+
 # Create an instance of the API
 app = Flask(__name__)
 api = Api(app)
@@ -50,8 +54,9 @@ class Device(Resource):
 
 def cmoscamera_frames():
     while True:
+        frame = cmos_camera_thread.frame if cmos_camera_thread.camera.connected else no_image_placeholder
         yield (b'--frame\r\n'
-               b'Content-Type: image/jpeg\r\n\r\n' + cmos_camera_thread.frame + b'\r\n')  # concat frame one by one and show result
+               b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')
 
         time.sleep(0.05)
 
@@ -63,8 +68,12 @@ class CMOSCamera(Resource):
 
 def lockincamera_frames():
     while True:
+        if LOCK_IN_CAMERA_CONNECTED:
+            frame = lock_in_camera_thread.frame if lock_in_camera_thread.camera.connected else no_image_placeholder
+        else:
+            frame = no_image_placeholder
         yield (b'--frame\r\n'
-               b'Content-Type: image/jpeg\r\n\r\n' + lock_in_camera_thread.frame + b'\r\n')
+               b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')
 
         time.sleep(0.05)
 
@@ -86,8 +95,13 @@ class SEMImages(Resource):
 
 def alignment_check_frames():
     while True:
+        if LOCK_IN_CAMERA_CONNECTED:
+            frame = alignment_check_thread.frame if (
+                lock_in_camera_thread.camera.connected and cmos_camera_thread.camera.connected) else no_image_placeholder
+        else:
+            frame = alignment_check_thread.frame if cmos_camera_thread.camera.connected else no_image_placeholder
         yield (b'--frame\r\n'
-               b'Content-Type: image/jpeg\r\n\r\n' + alignment_check_thread.frame + b'\r\n')
+               b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')
 
         time.sleep(0.05)
 
@@ -348,11 +362,11 @@ class AlignmentSetting(Resource):
         if (alignment_settings_db.search(alignment_items.name == name) == []):
             return {'message': 'Alignment setting not found', 'data': {}}, 404
         if args["point_idx"] < 0 or args["point_idx"] > 3:
-            return {'message': 'Point index must be between 0 and 3', 'data': {}}, 400
+            return {'message': 'Point index must be between 0 and 3', 'data': {}}, 404
         if args["x"] < 0 or args["x"] > 1:
-            return {'message': 'X coord must be between 0 and 1', 'data': {}}, 400
+            return {'message': 'X coord must be between 0 and 1', 'data': {}}, 404
         if args["y"] < 0 or args["y"] > 1:
-            return {'message': 'Y coord must be between 0 and 1', 'data': {}}, 400
+            return {'message': 'Y coord must be between 0 and 1', 'data': {}}, 404
 
         # Update alignment settings
         new_coord = (args['x'], args['y'])
@@ -369,16 +383,78 @@ class AlignmentSetting(Resource):
         return {'message': 'Alignment settings changed', 'data': alignment_setting}, 201
 
 
-class LaserProjectorSetPattern(Resource):
+class ProjectorBoxSetting(Resource):
+    def get(self, name):
+        projector_box_setting = alignment_settings_db.search(alignment_items.name == name)[
+            0]
+        return {'message': 'Success', 'data': projector_box_setting}, 200
+
+    def post(self, name):
+        parser = reqparse.RequestParser()
+
+        parser.add_argument('x_offset', required=True, type=float,
+                            help='x offset cannot be left blank')
+        parser.add_argument('y_offset', required=True, type=float,
+                            help='y offset cannot be left blank')
+        parser.add_argument('side_length', required=True, type=float,
+                            help='side length cannot be left blank')
+
+        # Parse the arguments into an object
+        args = parser.parse_args()
+
+        # Validate the arguments
+        projector_box_setting = alignment_settings_db.search(
+            alignment_items.name == name)[0]
+        if (projector_box_setting is None):
+            return {'message': 'Projector box setting not found', 'data': {}}, 404
+        if args["x_offset"] < -1 or args["x_offset"] > 1:
+            return {'message': 'X offset must be between 0 and 1', 'data': {}}, 404
+        if args["y_offset"] < -1 or args["y_offset"] > 1:
+            return {'message': 'Y offset must be between 0 and 1', 'data': {}}, 404
+        if args["side_length"] < 0 or args["side_length"] > 1:
+            return {'message': 'Side length must be between 0 and 1', 'data': {}}, 404
+        if 0.5 + args["side_length"] / 2 + args["x_offset"] > 1 or 0.5 - args["side_length"] / 2 + args["x_offset"] < 0:
+            return {'message': 'Box is out of bounds', 'data': {}}, 404
+        if 0.5 + args["side_length"] / 2 + args["y_offset"] > 1 or 0.5 - args["side_length"] / 2 + args["y_offset"] < 0:
+            return {'message': 'Box is out of bounds', 'data': {}}, 404
+
+        # Update projector box settings
+        alignment_settings_db.update(
+            {'x-offset': args['x_offset'],
+             'y-offset': args['y_offset'],
+             'side-length': args['side_length']
+             }, alignment_items.name == name)
+
+        updated_projector_box_setting = alignment_settings_db.search(
+            alignment_items.name == name)[0]
+
+        # TODO: Update projective matrix
+
+        return {'message': 'Projector box settings changed', 'data': updated_projector_box_setting}, 200
+
+
+class GreenProjectorSetPattern(Resource):
     def post(self, trajectories_setting_name):
         trajectories_setting = trajectories_db.search(
             trajectories_list.name == trajectories_setting_name)[0]
-        pattern_set = laser_projector_thread.SendPattern(trajectories_setting)
+        pattern_set = green_projector_thread.SendPattern(trajectories_setting)
 
         if(pattern_set):
-            return {'message': 'Pattern set in laser projector', 'data': {}}, 200
+            return {'message': 'Pattern set in green projector', 'data': {}}, 200
         else:
-            return {'message': 'Failed to set pattern in laser projector', 'data': {}}, 400
+            return {'message': 'Failed to set pattern in green projector', 'data': {}}, 400
+
+
+class GreenProjectorSetBox(Resource):
+    def post(self):
+        box_setting = alignment_settings_db.search(
+            alignment_items.name == 'green-projector-box')[0]
+        box_set = green_projector_thread.SendBox(box_setting)
+
+        if(box_set):
+            return {'message': 'Box set in green projector', 'data': {}}, 200
+        else:
+            return {'message': 'Failed to set box in green projector', 'data': {}}, 400
 
 
 api.add_resource(DeviceList, '/devices')
@@ -396,13 +472,17 @@ api.add_resource(TrajectoriesSettingGreenPointDiameter,
 api.add_resource(TrajectoriesSettingLaserPointDiameter,
                  '/trajectories-setting/<string:name>/laser-point-diameter')
 api.add_resource(AlignmentSetting, '/alignment-setting/<string:name>')
+api.add_resource(ProjectorBoxSetting, '/projector-box-setting/<string:name>')
 api.add_resource(CMOSCamera, '/cmos-camera/feed')
 api.add_resource(LockInCamera, '/lock-in-camera/feed')
 api.add_resource(SEMImages, '/sem-images/feed')
 api.add_resource(AlignmentCheck, '/alignment-check/feed')
-api.add_resource(LaserProjectorSetPattern,
-                 '/laser-projector/set-pattern/<string:trajectories_setting_name>')
-# api.add_resource(GreenProjectorSetPattern, '/rgb-projector/set-pattern')
+api.add_resource(GreenProjectorSetPattern,
+                 '/green-projector/set-pattern/<string:trajectories_setting_name>')
+# api.add_resource(LaserProjectorSetPattern,
+#                  '/laser-projector/set-pattern/<string:trajectories_setting_name>')
+api.add_resource(GreenProjectorSetBox,
+                 '/green-projector/set-box')
 
 
 if __name__ == "__main__":
@@ -431,9 +511,9 @@ if __name__ == "__main__":
     alignment_check_thread.start()
 
     # Init Projectors thread
-    laser_projector_thread = ProjectorThread('rgb-projector', 1)
-    laser_projector_thread.start()
-    # rgb_projector_thread = ProjectorThread('rgb-projector', 1)  # TODO
-    # rgb_projector_thread.start()
+    # laser_projector_thread = ProjectorThread('laser-projector', 1)
+    # laser_projector_thread.start()
+    green_projector_thread = ProjectorThread('green-projector', 1)
+    green_projector_thread.start()
 
     app.run(host='0.0.0.0', port=80, debug=False, use_reloader=False)
