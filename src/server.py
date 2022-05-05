@@ -107,7 +107,7 @@ class Trajectories(Resource):
         return {'message': 'Success', 'data': trajectories_db.all()}, 200
 
 
-class TrajectoriesSetting(Resource):
+class TrajectoriesSettingPattern(Resource):
     def get(self, name, trajectory_idx):
         trajectories_setting = trajectories_db.search(
             trajectories_list.name == name)[0]
@@ -148,7 +148,7 @@ class TrajectoriesSetting(Resource):
         if args["end_y"] < 0 or args["end_y"] > 1:
             return {'message': 'End y coord must be between 0 and 1', 'data': {}}, 404
 
-        # Update alignment settings
+        # Update trajectories
         new_start_coord = (args['start_x'], args['start_y'])
         new_end_coord = (args['end_x'], args['end_y'])
         updated_trajectory = {
@@ -221,6 +221,110 @@ class TrajectoriesSetting(Resource):
         return {'message': 'Added new trajectory', 'data': new_trajectory}, 201
 
 
+class TrajectoriesSettingNumberOfMeasurements(Resource):
+    def post(self, name):
+        parser = reqparse.RequestParser()
+
+        parser.add_argument('number_of_measurements', required=True, type=int,
+                            help='Number of measurements cannot be blank')
+
+        # Parse the arguments into an object
+        args = parser.parse_args()
+
+        # Validate the arguments
+        if args["number_of_measurements"] < 0:
+            return {'message': 'Number of measurements must be greater than 0', 'data': {}}, 404
+        trajectories_setting = trajectories_db.search(
+            trajectories_list.name == name)[0]
+        if (trajectories_setting is None):
+            return {'message': 'Trajectories setting not found', 'data': {}}, 404
+
+        # Update number of measurements
+        updated_number_of_measurements = int(args["number_of_measurements"])
+        trajectories_db.update(
+            {'number-of-measurements': updated_number_of_measurements}, trajectories_list.name == name)
+
+        return {'message': 'Number of measurements changed', 'data': args['number_of_measurements']}, 201
+
+
+class TrajectoriesSettingMeasurementTime(Resource):
+    def post(self, name):
+        parser = reqparse.RequestParser()
+
+        parser.add_argument('measurement_time', required=True, type=int,
+                            help='Measurement time cannot be blank')
+
+        # Parse the arguments into an object
+        args = parser.parse_args()
+
+        # Validate the arguments
+        if args["measurement_time"] < 0:
+            return {'message': 'Measurement time must be greater than 0', 'data': {}}, 404
+        trajectories_setting = trajectories_db.search(
+            trajectories_list.name == name)[0]
+        if (trajectories_setting is None):
+            return {'message': 'Trajectories setting not found', 'data': {}}, 404
+
+        # Update measurement time
+        updated_measurement_time = int(args["measurement_time"])
+        trajectories_db.update(
+            {'measurement-time': updated_measurement_time}, trajectories_list.name == name)
+
+        return {'message': 'Measurement time changed', 'data': args['measurement_time']}, 201
+
+
+class TrajectoriesSettingGreenPointDiameter(Resource):
+    def post(self, name):
+        parser = reqparse.RequestParser()
+
+        parser.add_argument('green_point_diameter', required=True, type=int,
+                            help='Green point diameter cannot be blank')
+
+        # Parse the arguments into an object
+        args = parser.parse_args()
+
+        # Validate the arguments
+        if args["green_point_diameter"] < 0:
+            return {'message': 'Green point diameter must be greater than 0', 'data': {}}, 404
+        trajectories_setting = trajectories_db.search(
+            trajectories_list.name == name)[0]
+        if (trajectories_setting is None):
+            return {'message': 'Trajectories setting not found', 'data': {}}, 404
+
+        # Update green point diameter
+        updated_green_point_diameter = int(args["green_point_diameter"])
+        trajectories_db.update(
+            {'green-point-diameter': updated_green_point_diameter}, trajectories_list.name == name)
+
+        return {'message': 'Green point diameter changed', 'data': args['green_point_diameter']}, 201
+
+
+class TrajectoriesSettingLaserPointDiameter(Resource):
+    def post(self, name):
+        parser = reqparse.RequestParser()
+
+        parser.add_argument('laser_point_diameter', required=True, type=int,
+                            help='Laser point diameter cannot be blank')
+
+        # Parse the arguments into an object
+        args = parser.parse_args()
+
+        # Validate the arguments
+        if args["laser_point_diameter"] < 0:
+            return {'message': 'Laser point diameter must be greater than 0', 'data': {}}, 404
+        trajectories_setting = trajectories_db.search(
+            trajectories_list.name == name)[0]
+        if (trajectories_setting is None):
+            return {'message': 'Trajectories setting not found', 'data': {}}, 404
+
+        # Update laser point diameter
+        updated_laser_point_diameter = int(args["laser_point_diameter"])
+        trajectories_db.update(
+            {'laser-point-diameter': updated_laser_point_diameter}, trajectories_list.name == name)
+
+        return {'message': 'Laser point diameter changed', 'data': args['laser_point_diameter']}, 201
+
+
 class AlignmentSetting(Resource):
     def get(self, name):
         alignment_setting = alignment_settings_db.search(alignment_items.name == name)[
@@ -281,8 +385,16 @@ api.add_resource(DeviceList, '/devices')
 api.add_resource(Device, '/device/<string:name>')
 api.add_resource(AlignmentSettings, '/alignment-settings')
 api.add_resource(Trajectories, '/trajectories')
-api.add_resource(TrajectoriesSetting,
+api.add_resource(TrajectoriesSettingPattern,
                  '/trajectories-setting/<string:name>/<int:trajectory_idx>')
+api.add_resource(TrajectoriesSettingNumberOfMeasurements,
+                 '/trajectories-setting/<string:name>/number-of-measurements')
+api.add_resource(TrajectoriesSettingMeasurementTime,
+                 '/trajectories-setting/<string:name>/measurement-time')
+api.add_resource(TrajectoriesSettingGreenPointDiameter,
+                 '/trajectories-setting/<string:name>/green-point-diameter')
+api.add_resource(TrajectoriesSettingLaserPointDiameter,
+                 '/trajectories-setting/<string:name>/laser-point-diameter')
 api.add_resource(AlignmentSetting, '/alignment-setting/<string:name>')
 api.add_resource(CMOSCamera, '/cmos-camera/feed')
 api.add_resource(LockInCamera, '/lock-in-camera/feed')
