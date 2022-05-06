@@ -11,3 +11,4 @@ pyusb==1.2.1
 zwoasi==0.1.0.1
 Pillow==8.4.0
 tinydb==4.7.0
+markdown==3.3.7
