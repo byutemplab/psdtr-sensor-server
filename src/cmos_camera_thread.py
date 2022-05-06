@@ -3,15 +3,17 @@
 import cv2
 import time
 import threading
-from cmoscamera.camerastream import CMOSCamera
+from cmoscamera.camerastream import CMOSCameraFeed
 from alignment import ImageTransformer
 from models import devices_db, devices_list, projected_frames
 
 
 class CMOSCameraThread(threading.Thread):
     def __init__(self):
+        current_settings = devices_db.search(
+            devices_list.name == "cmos-camera")[0]["settings"]
         # Initialize camera
-        self.camera = CMOSCamera()
+        self.camera = CMOSCameraFeed(current_settings)
         self.read = None
         self.frame = None
         self.projected_frame = None
@@ -38,7 +40,6 @@ class CMOSCameraThread(threading.Thread):
             if(self.camera.connected):
                 self.read = self.camera.Read()
                 if(self.read is not None):
-                    print("CMOS Camera read successful")
                     # Encode image as jpg
                     self.ret, self.buffer = cv2.imencode(
                         '.jpg', self.read)
@@ -51,6 +52,5 @@ class CMOSCameraThread(threading.Thread):
 
                     time.sleep(0.02)
             else:
-                print("CMOS Camera disconnected")
                 self.camera.Connect()  # Try to connect again
                 time.sleep(1)

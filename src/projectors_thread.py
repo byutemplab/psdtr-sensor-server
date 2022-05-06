@@ -49,7 +49,6 @@ class ProjectorThread(threading.Thread):
     def SendPattern(self, pattern):
         # Check if projector is connected
         connected = self.dmd.CheckConnection()
-        print(connected)
         if (not connected):
             return False
 
@@ -114,7 +113,6 @@ class ProjectorThread(threading.Thread):
     def SendBox(self, box):
         # Check if projector is connected
         connected = self.dmd.CheckConnection()
-        print(connected)
         if (not connected):
             return False
 
@@ -136,7 +134,7 @@ class ProjectorThread(threading.Thread):
         self.dmd.changemode(3)
 
         # Set secondary parameters
-        exposure = [1]
+        exposure = [0]
         dark_time = [0]
         trigger_in = [0]
         trigger_out = [0]

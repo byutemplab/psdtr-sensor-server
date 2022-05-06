@@ -2,9 +2,10 @@ import zwoasi as asi
 import cv2
 
 
-class CMOSCamera():
-    def __init__(self):
+class CMOSCameraFeed():
+    def __init__(self, settings):
         self.connected = False
+        self.settings = settings
         self.resolution = 960
         # Init asi library
         env_filename = 'cmoscamera/asi-sdk/lib/ASICamera2.dll'
@@ -24,9 +25,11 @@ class CMOSCamera():
             self.camera.start_video_capture()
 
             # Set camera parameters
-            self.camera.set_control_value(asi.ASI_GAIN, 50)
-            self.camera.set_control_value(asi.ASI_EXPOSURE, 700)
-            self.camera.set_control_value(asi.ASI_BRIGHTNESS, 100)
+            self.camera.set_control_value(
+                asi.ASI_EXPOSURE, self.settings["exposure"])
+            self.camera.set_control_value(asi.ASI_GAIN, self.settings["gain"])
+            self.camera.set_control_value(
+                asi.ASI_BRIGHTNESS, self.settings["brightness"])
             self.camera.set_control_value(asi.ASI_FLIP, 0)
             self.camera.set_control_value(asi.ASI_HIGH_SPEED_MODE, 1)
             self.camera.set_roi_format(self.resolution, self.resolution, 1, 0)
@@ -47,3 +50,16 @@ class CMOSCamera():
             self.camera.set_roi_format(self.resolution, self.resolution, 1, 0)
         except:
             self.connected = False
+
+    def UpdateSettings(self, settings):
+        self.settings = settings
+        if self.connected:
+            try:
+                self.camera.set_control_value(
+                    asi.ASI_EXPOSURE, self.settings["exposure"])
+                self.camera.set_control_value(
+                    asi.ASI_GAIN, self.settings["gain"])
+                self.camera.set_control_value(
+                    asi.ASI_BRIGHTNESS, self.settings["brightness"])
+            except:
+                self.connected = False

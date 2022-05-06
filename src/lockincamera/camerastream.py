@@ -23,6 +23,7 @@ class LockInCamera():
         self.heSys = LibHeLIC()
         self.connected = self.heSys.Open(0, sys='c3cam_sl70')
         if(self.connected == False):
+            self.connected = False
             return None
 
         self.connected = True

@@ -3,7 +3,7 @@ import os
 import cv2
 import time
 import threading
-from cmoscamera.camerastream import CMOSCamera
+from cmoscamera.camerastream import CMOSCameraFeed
 from lockincamera.camerastream import LockInCamera
 from models import alignment_settings_db, alignment_items
 from models import devices_db, devices_list
@@ -17,7 +17,7 @@ from projectors_thread import ProjectorThread
 from flask import Flask, Response
 from flask_restful import Resource, Api, reqparse
 
-LOCK_IN_CAMERA_CONNECTED = False
+LOCK_IN_CAMERA_CONNECTED = True
 
 # Import image placeholder
 no_image_placeholder = cv2.imencode('.jpg', cv2.imread(
@@ -61,7 +61,7 @@ def cmoscamera_frames():
         time.sleep(0.05)
 
 
-class CMOSCamera(Resource):
+class CMOSCameraFeed(Resource):
     def get(self):
         return Response(cmoscamera_frames(), mimetype='multipart/x-mixed-replace; boundary=frame')
 
@@ -78,6 +78,47 @@ def lockincamera_frames():
         time.sleep(0.05)
 
 
+class CMOSCameraSettings(Resource):
+    def get(self):
+        settings = devices_db.search(
+            devices_list.name == "cmos-camera")[0]["settings"]
+        return {'message': 'Success', 'data': settings}, 200
+
+    def post(self):
+        parser = reqparse.RequestParser()
+        parser.add_argument('exposure', type=int, required=True)
+        parser.add_argument('gain', type=int, required=True)
+        parser.add_argument('brightness', type=int, required=True)
+
+        # Parse the arguments
+        args = parser.parse_args()
+
+        # TODO: Validate the arguments
+        # exposure 10 - 500000 (ms)
+        if (args['exposure'] < 10 or args['exposure'] > 500000):
+            return {'message': 'Exposure must be between 10 and 500000', 'data': {}}, 404
+        # gain 0 - 100
+        if (args['gain'] < 0 or args['gain'] > 100):
+            return {'message': 'Gain must be between 0 and 100', 'data': {}}, 404
+        # brightness 0 - 100
+        if (args['brightness'] < 0 or args['brightness'] > 100):
+            return {'message': 'Brightness must be between 0 and 100', 'data': {}}, 404
+
+        # Update the settings in db
+        updated_settings = devices_db.search(
+            devices_list.name == "cmos-camera")[0]["settings"]
+        updated_settings["exposure"] = args["exposure"]
+        updated_settings["gain"] = args["gain"]
+        updated_settings["brightness"] = args["brightness"]
+        devices_db.update({"settings": updated_settings},
+                          devices_list.name == "cmos-camera")
+
+        # Update the settings in the camera
+        cmos_camera_thread.camera.UpdateSettings(updated_settings)
+
+        return {'message': 'Success', 'data': updated_settings}, 200
+
+
 class LockInCamera(Resource):
     def get(self):
         return Response(lockincamera_frames(), mimetype='multipart/x-mixed-replace; boundary=frame')
@@ -86,6 +127,19 @@ class LockInCamera(Resource):
 def sem_frames():
     yield (b'--frame\r\n'
            b'Content-Type: image/jpeg\r\n\r\n' + sem_image_frame + b'\r\n')
+
+
+class LockInCameraConnect(Resource):
+    def post(self):
+        # try to connect if not already connected
+        if LOCK_IN_CAMERA_CONNECTED and not lock_in_camera_thread.camera.connected:
+            lock_in_camera_thread.camera.Connect()
+            if lock_in_camera_thread.camera.connected:
+                return {'message': 'Connected lock-in camera', 'data': {}}, 200
+            else:
+                return {'message': 'Failed to connect lock-in camera', 'data': {}}, 400
+        # if already connected, return error
+        return {'message': 'Lock-in Camera already connected', 'data': {}}, 404
 
 
 class SEMImages(Resource):
@@ -473,8 +527,10 @@ api.add_resource(TrajectoriesSettingLaserPointDiameter,
                  '/trajectories-setting/<string:name>/laser-point-diameter')
 api.add_resource(AlignmentSetting, '/alignment-setting/<string:name>')
 api.add_resource(ProjectorBoxSetting, '/projector-box-setting/<string:name>')
-api.add_resource(CMOSCamera, '/cmos-camera/feed')
+api.add_resource(CMOSCameraFeed, '/cmos-camera/feed')
+api.add_resource(CMOSCameraSettings, '/cmos-camera/settings')
 api.add_resource(LockInCamera, '/lock-in-camera/feed')
+api.add_resource(LockInCameraConnect, '/lock-in-camera/connect')
 api.add_resource(SEMImages, '/sem-images/feed')
 api.add_resource(AlignmentCheck, '/alignment-check/feed')
 api.add_resource(GreenProjectorSetPattern,
