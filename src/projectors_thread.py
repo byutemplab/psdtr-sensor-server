@@ -41,8 +41,8 @@ class ProjectorThread(threading.Thread):
                 devices_db.update({'connected': self.dmd.connected},
                                   devices_list.name == self.name)
 
-            if (not self.dmd.connected):
-                print(self.name, "disconnected")
+            # if (not self.dmd.connected):
+            #     print(self.name, "disconnected")
 
             time.sleep(1)
 
