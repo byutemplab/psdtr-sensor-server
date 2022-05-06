@@ -14,3 +14,4 @@ tinydb==4.7.0
 markdown==3.3.7
 Flask==2.1.2
 Flask-RESTful==0.3.9
+pywinauto==0.6.8
