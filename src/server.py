@@ -86,9 +86,11 @@ class CMOSCameraSettings(Resource):
 
     def post(self):
         parser = reqparse.RequestParser()
-        parser.add_argument('exposure', type=int, required=True)
-        parser.add_argument('gain', type=int, required=True)
-        parser.add_argument('brightness', type=int, required=True)
+        parser.add_argument('exposure', type=int,
+                            location='args', required=True)
+        parser.add_argument('gain', type=int,  location='args', required=True)
+        parser.add_argument('brightness', type=int,
+                            location='args', required=True)
 
         # Parse the arguments
         args = parser.parse_args()
@@ -188,13 +190,13 @@ class TrajectoriesSettingPattern(Resource):
     def post(self, name, trajectory_idx):
         parser = reqparse.RequestParser()
 
-        parser.add_argument('start_x', required=True, type=float,
+        parser.add_argument('start_x', required=True, type=float, location='args',
                             help='Trajectory start x coordinate cannot be blank')
-        parser.add_argument('start_y', required=True, type=float,
+        parser.add_argument('start_y', required=True, type=float, location='args',
                             help='Trajectory start y coordinate cannot be blank')
-        parser.add_argument('end_x', required=True, type=float,
+        parser.add_argument('end_x', required=True, type=float, location='args',
                             help='Trajectory end x coordinate cannot be blank')
-        parser.add_argument('end_y', required=True, type=float,
+        parser.add_argument('end_y', required=True, type=float, location='args',
                             help='Trajectory end y coordinate cannot be blank')
 
         # Parse the arguments into an object
@@ -248,13 +250,13 @@ class TrajectoriesSettingPattern(Resource):
     def put(self, name, trajectory_idx):
         parser = reqparse.RequestParser()
 
-        parser.add_argument('start_x', required=True, type=float,
+        parser.add_argument('start_x', required=True, type=float, location='args',
                             help='Trajectory start x coordinate cannot be blank')
-        parser.add_argument('start_y', required=True, type=float,
+        parser.add_argument('start_y', required=True, type=float, location='args',
                             help='Trajectory start y coordinate cannot be blank')
-        parser.add_argument('end_x', required=True, type=float,
+        parser.add_argument('end_x', required=True, type=float, location='args',
                             help='Trajectory end x coordinate cannot be blank')
-        parser.add_argument('end_y', required=True, type=float,
+        parser.add_argument('end_y', required=True, type=float, location='args',
                             help='Trajectory end y coordinate cannot be blank')
 
         # Parse the arguments into an object
@@ -293,7 +295,7 @@ class TrajectoriesSettingNumberOfMeasurements(Resource):
     def post(self, name):
         parser = reqparse.RequestParser()
 
-        parser.add_argument('number_of_measurements', required=True, type=int,
+        parser.add_argument('number_of_measurements', required=True, type=int, location='args',
                             help='Number of measurements cannot be blank')
 
         # Parse the arguments into an object
@@ -319,7 +321,7 @@ class TrajectoriesSettingMeasurementTime(Resource):
     def post(self, name):
         parser = reqparse.RequestParser()
 
-        parser.add_argument('measurement_time', required=True, type=int,
+        parser.add_argument('measurement_time', required=True, type=int, location='args',
                             help='Measurement time cannot be blank')
 
         # Parse the arguments into an object
@@ -345,7 +347,7 @@ class TrajectoriesSettingGreenPointDiameter(Resource):
     def post(self, name):
         parser = reqparse.RequestParser()
 
-        parser.add_argument('green_point_diameter', required=True, type=int,
+        parser.add_argument('green_point_diameter', required=True, type=int, location='args',
                             help='Green point diameter cannot be blank')
 
         # Parse the arguments into an object
@@ -371,7 +373,7 @@ class TrajectoriesSettingLaserPointDiameter(Resource):
     def post(self, name):
         parser = reqparse.RequestParser()
 
-        parser.add_argument('laser_point_diameter', required=True, type=int,
+        parser.add_argument('laser_point_diameter', required=True, type=int, location='args',
                             help='Laser point diameter cannot be blank')
 
         # Parse the arguments into an object
@@ -402,11 +404,11 @@ class AlignmentSetting(Resource):
     def post(self, name):
         parser = reqparse.RequestParser()
 
-        parser.add_argument('point_idx', required=True, type=int,
+        parser.add_argument('point_idx', required=True, type=int, location='args',
                             help='point index cannot be left blank')
-        parser.add_argument('x', required=True, type=float,
+        parser.add_argument('x', required=True, type=float, location='args',
                             help='x coord cannot be left blank')
-        parser.add_argument('y', required=True, type=float,
+        parser.add_argument('y', required=True, type=float, location='args',
                             help='y coord cannot be left blank')
 
         # Parse the arguments into an object
@@ -446,11 +448,11 @@ class ProjectorBoxSetting(Resource):
     def post(self, name):
         parser = reqparse.RequestParser()
 
-        parser.add_argument('x_offset', required=True, type=float,
+        parser.add_argument('x_offset', required=True, type=float, location='args',
                             help='x offset cannot be left blank')
-        parser.add_argument('y_offset', required=True, type=float,
+        parser.add_argument('y_offset', required=True, type=float, location='args',
                             help='y offset cannot be left blank')
-        parser.add_argument('side_length', required=True, type=float,
+        parser.add_argument('side_length', required=True, type=float, location='args',
                             help='side length cannot be left blank')
 
         # Parse the arguments into an object
