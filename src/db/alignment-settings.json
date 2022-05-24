@@ -1,1 +1,95 @@
-{"_default": {"1": {"name": "cmos-camera-marks", "coordinates": [[0.8496, 0.1123], [0.8986, 0.8879], [0.0854, 0.9224], [0.1101, 0.0978]]}, "2": {"name": "sem-image-marks", "coordinates": [[0.1117, 0.128], [0.8574, 0.1422], [0.9212, 0.9036], [0.1079, 0.9074]]}, "3": {"name": "cmos-camera-green-dots", "coordinates": [[0.187, 0.1884], [0.8045, 0.165], [0.7894, 0.8163], [0.1418, 0.8352]]}, "4": {"name": "lock-in-camera-green-dots", "coordinates": [[0.1911, 0.2333], [0.7598, 0.2318], [0.7598, 0.7989], [0.2236, 0.7727]]}, "5": {"name": "green-projector-box", "x-offset": -0.0, "y-offset": 0.0, "side-length": 0.5, "thickness": 1}}}
+{
+    "_default": {
+        "1": {
+            "name": "cmos-camera-marks",
+            "coordinates": [
+                [
+                    0.8496,
+                    0.1123
+                ],
+                [
+                    0.8986,
+                    0.8879
+                ],
+                [
+                    0.0854,
+                    0.9224
+                ],
+                [
+                    0.1101,
+                    0.0978
+                ]
+            ]
+        },
+        "2": {
+            "name": "sem-image-marks",
+            "coordinates": [
+                [
+                    0.1117,
+                    0.128
+                ],
+                [
+                    0.8574,
+                    0.1422
+                ],
+                [
+                    0.9212,
+                    0.9036
+                ],
+                [
+                    0.1079,
+                    0.9074
+                ]
+            ]
+        },
+        "3": {
+            "name": "cmos-camera-green-dots",
+            "coordinates": [
+                [
+                    0.187,
+                    0.1884
+                ],
+                [
+                    0.8045,
+                    0.165
+                ],
+                [
+                    0.7894,
+                    0.8163
+                ],
+                [
+                    0.1418,
+                    0.8352
+                ]
+            ]
+        },
+        "4": {
+            "name": "lock-in-camera-green-dots",
+            "coordinates": [
+                [
+                    0.1911,
+                    0.2333
+                ],
+                [
+                    0.7598,
+                    0.2318
+                ],
+                [
+                    0.7598,
+                    0.7989
+                ],
+                [
+                    0.2236,
+                    0.7727
+                ]
+            ]
+        },
+        "5": {
+            "name": "green-projector-box",
+            "x-offset": -0.0,
+            "y-offset": 0.0,
+            "side-length": 0.5,
+            "thickness": 1
+        }
+    }
+}

@@ -23,11 +23,11 @@ class ProjectorThread(threading.Thread):
         self.address = address
         self.dmd = dmd(address)
 
-        # devices = list(usb.core.find(idVendor=0x0451,           # just for testing
-        #                idProduct=0xc900, find_all=True))
-        # print("addresses available")
-        # for dev in devices:
-        #     print(dev.address)
+        devices = list(usb.core.find(idVendor=0x0451,           # just for testing
+                       idProduct=0xc900, find_all=True))
+        print("addresses available")
+        for dev in devices:
+            print(dev.address)
 
     def run(self):
         while(True):
